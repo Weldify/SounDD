@@ -100,7 +100,6 @@ create :: (data: Sound_Data) -> *Sound {
 destroy :: (sound: *Sound) {
     stop(sound);
     free(sound);
-    print("deetroo");
 }
 
 play :: (using sound: *Sound) {
