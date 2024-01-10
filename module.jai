@@ -1,4 +1,4 @@
-// Version: 0.2.0
+// Version: 0.2.1
 
 #module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV, SAMPLE_RATE: u32 = 44100) {
     Supported_Formats :: enum_flags {
@@ -66,20 +66,21 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
     data: Sound_Data;
     
     if format == .WAV {
-        #assert SUPPORTED_FORMATS & .WAV;
-        
-        format, samples, success := get_wav_header(str);
-        assert(success, "Failed to read .wav file");
-        assert(format.nChannels <= 2, "Only mono and stereo are supported");
-        
-        data.samples = cast(*s16)samples.data;
-        data.is_stereo = format.nChannels == 2;
-        
-        // Because the amount of output channels is 2
-        data.sample_count = xx (samples.count / 2);
-        data.time_length = cast(float64)data.sample_count / SAMPLE_RATE / format.nChannels;
-        data.samples_per_frame = data.time_length / data.sample_count;
+        #if SUPPORTED_FORMATS & .WAV {
+            format, samples, success := get_wav_header(str);
+            assert(success, "Failed to read .wav file");
+            assert(format.nChannels <= 2, "Only mono and stereo are supported");
+            
+            data.samples = cast(*s16)samples.data;
+            data.is_stereo = format.nChannels == 2;
+            
+            // Because the amount of output channels is 2
+            data.sample_count = xx (samples.count / 2);
+            data.time_length = cast(float64)data.sample_count / SAMPLE_RATE / format.nChannels;
+        } else assert(false, "Wav support is not enabled");
     } else assert(false, "Unsupported format");
+    
+    data.samples_per_frame = data.time_length / data.sample_count;
 
     return data;
 }
