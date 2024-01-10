@@ -208,7 +208,7 @@ saudio_stream_callback :: (buffer: *float32, frame_count: s32, channel_count: s3
     }
 }
 
-stream_callback :: (buffer: *float32, frame_count: s32, channel_count: s32) #expand {
+stream_callback :: (buffer: *float32, frame_count: s32, channel_count: s32) {
     assert(channel_count == 2);
     
     lock(*main_mutex);
