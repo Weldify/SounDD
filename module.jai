@@ -1,6 +1,6 @@
-// 0.1
+// Version: 0.2.0
 
-#module_parameters(supported_formats := Supported_Formats.WAV) {
+#module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV, SAMPLE_RATE: u32 = 44100) {
     Supported_Formats :: enum_flags {
         WAV;
     }
@@ -12,7 +12,7 @@
 #import "String";
 #import "Thread";
 
-#if supported_formats & .WAV {
+#if SUPPORTED_FORMATS & .WAV {
     #import "Wav_File";
 }
 
@@ -66,7 +66,7 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
     data: Sound_Data;
     
     if format == .WAV {
-        #assert supported_formats & .WAV;
+        #assert SUPPORTED_FORMATS & .WAV;
         
         format, samples, success := get_wav_header(str);
         assert(success, "Failed to read .wav file");
@@ -77,7 +77,7 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
         
         // Because the amount of output channels is 2
         data.sample_count = xx (samples.count / 2);
-        data.time_length = data.sample_count / 44100.0 / format.nChannels;
+        data.time_length = cast(float64)data.sample_count / SAMPLE_RATE / format.nChannels;
         data.samples_per_frame = data.time_length / data.sample_count;
     } else assert(false, "Unsupported format");
 
@@ -130,7 +130,7 @@ audio_init :: () {
 
     // @Note: If anything randomly breaks, I will blame multithreading
     saudio_setup(.{
-        sample_rate = 44100,
+        sample_rate = xx SAMPLE_RATE,
         num_channels = 2,
         stream_cb = saudio_stream_callback,
         saudio_allocator = .{
