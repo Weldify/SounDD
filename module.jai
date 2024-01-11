@@ -1,8 +1,9 @@
-// Version: 0.3.0
+// Version: 0.5.0
 
-#module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV, OUTPUT_SAMPLE_RATE: u32 = 44100) {
+#module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV | .FLAC, OUTPUT_SAMPLE_RATE: u32 = 44100) {
     Supported_Formats :: enum_flags {
         WAV;
+        FLAC;
     }
 }
 
@@ -12,17 +13,22 @@
 #import "String";
 #import "Thread";
 
-#if SUPPORTED_FORMATS & .WAV {
-    #import "Wav_File";
-}
+#if SUPPORTED_FORMATS & .WAV #load "wav.jai";
+#if SUPPORTED_FORMATS & .FLAC #load "flac.jai";
 
 Audio_Format :: enum {
     WAV;
+    FLAC;
 }
 
 Sound_Data :: struct {
+    format: Audio_Format;
+
     is_stereo: bool;
+    channel_count: u8;
+    
     sample_count: u32;
+    sample_rate: u32;
     samples_per_frame: float64;
     time_length: float64;
     rate_scale: float64;
@@ -46,6 +52,8 @@ Sound :: struct {
     data: Sound_Data;
 }
 
+audio_master_volume: float32 = 1;
+
 sound_data_load_from_file :: (path: string) -> Sound_Data {
     contents, success := read_entire_file(path);
     assert(success, "Failed to read file");
@@ -53,11 +61,14 @@ sound_data_load_from_file :: (path: string) -> Sound_Data {
     splits := split(path, ".");
     extension := splits[splits.count-1];
     
-    data: Sound_Data;
-    if extension == "wav" {
-        data = sound_data_load_from_string(contents, .WAV);
-    } else assert(false, "Unsupported extension");
+    format: Audio_Format;
+    if extension == {
+        case "wav"; format = .WAV;
+        case "flac"; format = .FLAC;
+        case; assert(false, "Unsupported extension");
+    }
     
+    data := sound_data_load_from_string(contents, format);
     data.owned_source = contents;
     
     return data;
@@ -67,30 +78,32 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
     data: Sound_Data;
     
     if format == .WAV {
-        #if SUPPORTED_FORMATS & .WAV {
-            format, samples, success := get_wav_header(str);
-            assert(success, "Failed to read .wav file");
-            assert(format.nChannels <= 2, "Only mono and stereo are supported");
-            
-            data.samples = cast(*s16)samples.data;
-            data.is_stereo = format.nChannels == 2;
-            
-            // Because the amount of output channels is 2
-            data.sample_count = xx (samples.count / 2);
-            data.time_length = cast(float64)data.sample_count / format.nSamplesPerSec / format.nChannels;
-            data.rate_scale = cast(float64)format.nSamplesPerSec / OUTPUT_SAMPLE_RATE;
-        } else assert(false, "Wav support is not enabled");
+        #if SUPPORTED_FORMATS & .WAV data = wav_parse_data(str);
+        else assert(false, "WAV support is not enabled");
+    } else if format == .FLAC {
+        #if SUPPORTED_FORMATS & .FLAC data = flac_parse_data(str);
+        else assert(false, "FLAC support is not enabled");
     } else assert(false, "Unsupported format");
     
+    data.format = format;
+    
+    data.is_stereo = data.channel_count == 2;
+    assert(data.channel_count <= 2, "Only mono and stereo are supported");
+    
+    data.time_length = cast(float64)data.sample_count / data.sample_rate / data.channel_count;
+    data.rate_scale = cast(float64)data.sample_rate / OUTPUT_SAMPLE_RATE;
     data.samples_per_frame = data.time_length / data.sample_count;
 
     return data;
 }
 
 sound_data_free :: (data: Sound_Data) {
-    if data.owned_source.data == null return;
+    if data.owned_source.data != null free(data.owned_source);
     
-    free(data.owned_source);
+    if data.format == {
+        // case .WAV; Data points to the original string, so it just got freed above
+        case .FLAC; #if SUPPORTED_FORMATS & .FLAC flac_free_data(data);
+    }
 }
 
 create :: (data: Sound_Data) -> *Sound {
@@ -160,7 +173,7 @@ audio_update :: () {
 #scope_file
 
 #if OS == .WINDOWS {
-	sokol_audio :: #library,no_dll "sokol";
+	sokol :: #library,no_dll "win/sokol";
 	ole :: #system_library "ole32";
 }
 
@@ -168,8 +181,8 @@ sounds_that_are_playing: [..]*Sound;
 main_mutex: Mutex;
 
 SAudio_Allocator :: struct {
-    alloc_fn: (u64, *void) -> *void #c_call;
-    free_fn: (*void, *void) #c_call;
+    alloc_fn: (size: u64, user_data: *void) -> *void #c_call;
+    free_fn: (ptr: *void, user_data: *void) #c_call;
     user_data: *void;
 }
 
@@ -179,15 +192,15 @@ SAudio_Desc :: struct {
     buffer_frames: s32;
     packet_frames: s32;
     num_packets: s32;
-    stream_cb: (*float32, s32, s32) #c_call;
-    stream_userdata_cb: (*float32, s32, s32, *void) #c_call;
+    stream_cb: (buffer: *float32, frame_count: s32, channel_count: s32) #c_call;
+    stream_userdata_cb: (buffer: *float32, frame_count: s32, channel_count: s32, user_data: *void) #c_call;
     user_data: *void;
     saudio_allocator: SAudio_Allocator;
 }
 
-saudio_setup :: (desc: SAudio_Desc) -> void #foreign sokol_audio;
-saudio_isvalid :: () -> bool #foreign sokol_audio;
-saudio_sample_rate :: () -> s32 #foreign sokol_audio;
+saudio_setup :: (desc: SAudio_Desc) -> void #foreign sokol;
+saudio_isvalid :: () -> bool #foreign sokol;
+saudio_sample_rate :: () -> s32 #foreign sokol;
 
 saudio_alloc :: (size: u64, user_data: *void) -> *void #c_call {
     new_context: Context;
@@ -230,6 +243,8 @@ stream_callback :: (buffer: *float32, frame_count: s32, channel_count: s32) {
             }
             
             sample_counter := time_position / data.samples_per_frame;
+            time_delta := data.samples_per_frame * data.rate_scale * speed;
+            vol := volume * audio_master_volume;
             
             if data.is_stereo {
                 begin_index := cast(u32)(sample_counter / 2) * 2;
@@ -237,18 +252,18 @@ stream_callback :: (buffer: *float32, frame_count: s32, channel_count: s32) {
                 left_sample := data.samples[begin_index];
                 right_sample := data.samples[begin_index + 1];
                 
-                left += (cast(float)left_sample / S16_MAX) * volume;
-                right += (cast(float)right_sample / S16_MAX) * volume;
+                left += (cast(float)left_sample / S16_MAX) * vol;
+                right += (cast(float)right_sample / S16_MAX) * vol;
                 
-                time_position += data.samples_per_frame * data.rate_scale * speed * 2;
+                time_position += time_delta * 2;
             } else {
                 sample := data.samples[cast(u32)sample_counter];
-                value := (cast(float)sample / S16_MAX) * volume / 2;
+                value := (cast(float)sample / S16_MAX) * vol;
                 
                 left += value;
                 right += value;
                 
-                time_position += data.samples_per_frame * data.rate_scale * speed;
+                time_position += time_delta;
             }
         }
         
