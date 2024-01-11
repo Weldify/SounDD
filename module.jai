@@ -1,8 +1,9 @@
 // Version: 0.3.0
 
-#module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV, OUTPUT_SAMPLE_RATE: u32 = 44100) {
+#module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV | .FLAC, OUTPUT_SAMPLE_RATE: u32 = 44100) {
     Supported_Formats :: enum_flags {
         WAV;
+        FLAC;
     }
 }
 
@@ -12,12 +13,12 @@
 #import "String";
 #import "Thread";
 
-#if SUPPORTED_FORMATS & .WAV {
-    #import "Wav_File";
-}
+#if SUPPORTED_FORMATS & .WAV #load "wav.jai";
+#if SUPPORTED_FORMATS & .FLAC #load "flac.jai";
 
 Audio_Format :: enum {
     WAV;
+    FLAC;
 }
 
 Sound_Data :: struct {
@@ -53,11 +54,14 @@ sound_data_load_from_file :: (path: string) -> Sound_Data {
     splits := split(path, ".");
     extension := splits[splits.count-1];
     
-    data: Sound_Data;
-    if extension == "wav" {
-        data = sound_data_load_from_string(contents, .WAV);
-    } else assert(false, "Unsupported extension");
+    format: Audio_Format;
+    if extension == {
+        case "wav"; format = .WAV;
+        case "flac"; format = .FLAC;
+        case; assert(false, "Unsupported extension");
+    }
     
+    data := sound_data_load_from_string(contents, format);
     data.owned_source = contents;
     
     return data;
@@ -68,18 +72,12 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
     
     if format == .WAV {
         #if SUPPORTED_FORMATS & .WAV {
-            format, samples, success := get_wav_header(str);
-            assert(success, "Failed to read .wav file");
-            assert(format.nChannels <= 2, "Only mono and stereo are supported");
-            
-            data.samples = cast(*s16)samples.data;
-            data.is_stereo = format.nChannels == 2;
-            
-            // Because the amount of output channels is 2
-            data.sample_count = xx (samples.count / 2);
-            data.time_length = cast(float64)data.sample_count / format.nSamplesPerSec / format.nChannels;
-            data.rate_scale = cast(float64)format.nSamplesPerSec / OUTPUT_SAMPLE_RATE;
-        } else assert(false, "Wav support is not enabled");
+            data = wav_parse_data(str);
+        } else assert(false, "WAV support is not enabled");
+    } else if format == .FLAC {
+        #if SUPPORTED_FORMATS & .FLAC {
+            data = flac_parse_data(str);
+        } else assert(false, "FLAC support is not enabled");
     } else assert(false, "Unsupported format");
     
     data.samples_per_frame = data.time_length / data.sample_count;
