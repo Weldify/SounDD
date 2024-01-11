@@ -71,13 +71,11 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
     data: Sound_Data;
     
     if format == .WAV {
-        #if SUPPORTED_FORMATS & .WAV {
-            data = wav_parse_data(str);
-        } else assert(false, "WAV support is not enabled");
+        #if SUPPORTED_FORMATS & .WAV data = wav_parse_data(str);
+        else assert(false, "WAV support is not enabled");
     } else if format == .FLAC {
-        #if SUPPORTED_FORMATS & .FLAC {
-            data = flac_parse_data(str);
-        } else assert(false, "FLAC support is not enabled");
+        #if SUPPORTED_FORMATS & .FLAC data = flac_parse_data(str);
+        else assert(false, "FLAC support is not enabled");
     } else assert(false, "Unsupported format");
     
     data.samples_per_frame = data.time_length / data.sample_count;
@@ -158,7 +156,7 @@ audio_update :: () {
 #scope_file
 
 #if OS == .WINDOWS {
-	sokol_audio :: #library,no_dll "sokol";
+	sokol :: #library,no_dll "win/sokol";
 	ole :: #system_library "ole32";
 }
 
@@ -183,9 +181,9 @@ SAudio_Desc :: struct {
     saudio_allocator: SAudio_Allocator;
 }
 
-saudio_setup :: (desc: SAudio_Desc) -> void #foreign sokol_audio;
-saudio_isvalid :: () -> bool #foreign sokol_audio;
-saudio_sample_rate :: () -> s32 #foreign sokol_audio;
+saudio_setup :: (desc: SAudio_Desc) -> void #foreign sokol;
+saudio_isvalid :: () -> bool #foreign sokol;
+saudio_sample_rate :: () -> s32 #foreign sokol;
 
 saudio_alloc :: (size: u64, user_data: *void) -> *void #c_call {
     new_context: Context;
