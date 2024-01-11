@@ -1,6 +1,6 @@
-// Version: 0.2.1
+// Version: 0.3.0
 
-#module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV, SAMPLE_RATE: u32 = 44100) {
+#module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV, OUTPUT_SAMPLE_RATE: u32 = 44100) {
     Supported_Formats :: enum_flags {
         WAV;
     }
@@ -25,6 +25,7 @@ Sound_Data :: struct {
     sample_count: u32;
     samples_per_frame: float64;
     time_length: float64;
+    rate_scale: float64;
     
     owned_source: string;
     samples: *s16;
@@ -76,7 +77,8 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
             
             // Because the amount of output channels is 2
             data.sample_count = xx (samples.count / 2);
-            data.time_length = cast(float64)data.sample_count / SAMPLE_RATE / format.nChannels;
+            data.time_length = cast(float64)data.sample_count / format.nSamplesPerSec / format.nChannels;
+            data.rate_scale = cast(float64)format.nSamplesPerSec / OUTPUT_SAMPLE_RATE;
         } else assert(false, "Wav support is not enabled");
     } else assert(false, "Unsupported format");
     
@@ -130,7 +132,7 @@ audio_init :: () {
 
     // @Note: If anything randomly breaks, I will blame multithreading
     saudio_setup(.{
-        sample_rate = xx SAMPLE_RATE,
+        sample_rate = xx OUTPUT_SAMPLE_RATE,
         num_channels = 2,
         stream_cb = saudio_stream_callback,
         saudio_allocator = .{
@@ -157,13 +159,13 @@ audio_update :: () {
 
 #scope_file
 
-sounds_that_are_playing: [..]*Sound;
-main_mutex: Mutex;
-
 #if OS == .WINDOWS {
 	sokol_audio :: #library,no_dll "sokol";
 	ole :: #system_library "ole32";
 }
+
+sounds_that_are_playing: [..]*Sound;
+main_mutex: Mutex;
 
 SAudio_Allocator :: struct {
     alloc_fn: (u64, *void) -> *void #c_call;
@@ -238,7 +240,7 @@ stream_callback :: (buffer: *float32, frame_count: s32, channel_count: s32) {
                 left += (cast(float)left_sample / S16_MAX) * volume;
                 right += (cast(float)right_sample / S16_MAX) * volume;
                 
-                time_position += data.samples_per_frame * speed * 2;
+                time_position += data.samples_per_frame * data.rate_scale * speed * 2;
             } else {
                 sample := data.samples[cast(u32)sample_counter];
                 value := (cast(float)sample / S16_MAX) * volume / 2;
@@ -246,7 +248,7 @@ stream_callback :: (buffer: *float32, frame_count: s32, channel_count: s32) {
                 left += value;
                 right += value;
                 
-                time_position += data.samples_per_frame * speed;
+                time_position += data.samples_per_frame * data.rate_scale * speed;
             }
         }
         
