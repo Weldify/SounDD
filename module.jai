@@ -1,4 +1,4 @@
-// Version: 0.3.0
+// Version: 0.4.0
 
 #module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV | .FLAC, OUTPUT_SAMPLE_RATE: u32 = 44100) {
     Supported_Formats :: enum_flags {
