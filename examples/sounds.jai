@@ -8,7 +8,8 @@ main :: () {
     
     // You can load stereo and mono files
     data_1 := sound_data_load_from_file("examples/footstep_1.wav");
-    data_2 := sound_data_load_from_file("examples/rune_collect.wav");
+    data_2 := sound_data_load_from_file("examples/rune_collect.flac");
+    
     data_3 := sound_data_load_from_file("examples/rune_collect.flac");
     defer sound_data_free(data_3);
     
