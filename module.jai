@@ -22,6 +22,8 @@ Audio_Format :: enum {
 }
 
 Sound_Data :: struct {
+    format: Audio_Format;
+
     is_stereo: bool;
     channel_count: u8;
     
@@ -81,6 +83,8 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
         else assert(false, "FLAC support is not enabled");
     } else assert(false, "Unsupported format");
     
+    data.format = format;
+    
     data.is_stereo = data.channel_count == 2;
     assert(data.channel_count <= 2, "Only mono and stereo are supported");
     
@@ -92,9 +96,12 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
 }
 
 sound_data_free :: (data: Sound_Data) {
-    if data.owned_source.data == null return;
+    if data.owned_source.data != null free(data.owned_source);
     
-    free(data.owned_source);
+    if data.format == {
+        // case .WAV; Data points to the original string, so it just got freed above
+        case .FLAC; #if SUPPORTED_FORMATS & .FLAC flac_free_data(data);
+    }
 }
 
 create :: (data: Sound_Data) -> *Sound {
