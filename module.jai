@@ -1,4 +1,4 @@
-// Version: 0.4.0
+// Version: 0.5.0
 
 #module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV | .FLAC, OUTPUT_SAMPLE_RATE: u32 = 44100) {
     Supported_Formats :: enum_flags {
@@ -51,6 +51,8 @@ Sound :: struct {
     
     data: Sound_Data;
 }
+
+audio_master_volume: float32 = 1;
 
 sound_data_load_from_file :: (path: string) -> Sound_Data {
     contents, success := read_entire_file(path);
@@ -241,6 +243,8 @@ stream_callback :: (buffer: *float32, frame_count: s32, channel_count: s32) {
             }
             
             sample_counter := time_position / data.samples_per_frame;
+            time_delta := data.samples_per_frame * data.rate_scale * speed;
+            vol := volume * audio_master_volume;
             
             if data.is_stereo {
                 begin_index := cast(u32)(sample_counter / 2) * 2;
@@ -248,18 +252,18 @@ stream_callback :: (buffer: *float32, frame_count: s32, channel_count: s32) {
                 left_sample := data.samples[begin_index];
                 right_sample := data.samples[begin_index + 1];
                 
-                left += (cast(float)left_sample / S16_MAX) * volume;
-                right += (cast(float)right_sample / S16_MAX) * volume;
+                left += (cast(float)left_sample / S16_MAX) * vol;
+                right += (cast(float)right_sample / S16_MAX) * vol;
                 
-                time_position += data.samples_per_frame * data.rate_scale * speed * 2;
+                time_position += time_delta * 2;
             } else {
                 sample := data.samples[cast(u32)sample_counter];
-                value := (cast(float)sample / S16_MAX) * volume / 2;
+                value := (cast(float)sample / S16_MAX) * vol;
                 
                 left += value;
                 right += value;
                 
-                time_position += data.samples_per_frame * data.rate_scale * speed;
+                time_position += time_delta;
             }
         }
         
