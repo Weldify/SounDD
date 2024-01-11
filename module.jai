@@ -1,9 +1,10 @@
 // Version: 0.5.0
 
-#module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV | .FLAC, OUTPUT_SAMPLE_RATE: u32 = 44100) {
+#module_parameters(SUPPORTED_FORMATS := Supported_Formats.WAV | .FLAC | .QOA, OUTPUT_SAMPLE_RATE: u32 = 44100) {
     Supported_Formats :: enum_flags {
         WAV;
         FLAC;
+        QOA;
     }
 }
 
@@ -15,10 +16,12 @@
 
 #if SUPPORTED_FORMATS & .WAV #load "wav.jai";
 #if SUPPORTED_FORMATS & .FLAC #load "flac.jai";
+#if SUPPORTED_FORMATS & .QOA #load "qoa.jai";
 
 Audio_Format :: enum {
     WAV;
     FLAC;
+    QOA;
 }
 
 Sound_Data :: struct {
@@ -65,6 +68,7 @@ sound_data_load_from_file :: (path: string) -> Sound_Data {
     if extension == {
         case "wav"; format = .WAV;
         case "flac"; format = .FLAC;
+        case "qoa"; format = .QOA;
         case; assert(false, "Unsupported extension");
     }
     
@@ -83,6 +87,9 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
     } else if format == .FLAC {
         #if SUPPORTED_FORMATS & .FLAC data = flac_parse_data(str);
         else assert(false, "FLAC support is not enabled");
+    } else if format == .QOA {
+        #if SUPPORTED_FORMATS & .QOA data = qoa_parse_data(str);
+        else assert(false, "QOA support is not enabled");
     } else assert(false, "Unsupported format");
     
     data.format = format;
@@ -103,6 +110,7 @@ sound_data_free :: (data: Sound_Data) {
     if data.format == {
         // case .WAV; Data points to the original string, so it just got freed above
         case .FLAC; #if SUPPORTED_FORMATS & .FLAC flac_free_data(data);
+        case .QOA; #if SUPPORTED_FORMATS & .QOA qoa_free_data(data);
     }
 }
 

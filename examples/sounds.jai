@@ -13,6 +13,8 @@ main :: () {
     data_3 := sound_data_load_from_file("examples/rune_collect.flac");
     defer sound_data_free(data_3);
     
+    data_4 := sound_data_load_from_file("examples/enemy_kill.qoa");
+    
     footstep := create(data_1);
     footstep.volume = 0.5;
     footstep.flags |= .SHOULD_REPEAT;
