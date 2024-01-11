@@ -23,7 +23,10 @@ Audio_Format :: enum {
 
 Sound_Data :: struct {
     is_stereo: bool;
+    channel_count: u8;
+    
     sample_count: u32;
+    sample_rate: u32;
     samples_per_frame: float64;
     time_length: float64;
     rate_scale: float64;
@@ -78,6 +81,11 @@ sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data
         else assert(false, "FLAC support is not enabled");
     } else assert(false, "Unsupported format");
     
+    data.is_stereo = data.channel_count == 2;
+    assert(data.channel_count <= 2, "Only mono and stereo are supported");
+    
+    data.time_length = cast(float64)data.sample_count / data.sample_rate / data.channel_count;
+    data.rate_scale = cast(float64)data.sample_rate / OUTPUT_SAMPLE_RATE;
     data.samples_per_frame = data.time_length / data.sample_count;
 
     return data;

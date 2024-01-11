@@ -13,11 +13,9 @@ flac_parse_data :: (str: string) -> Sound_Data {
     assert(channel_count <= 2, "Only mono and stereo are supported");
     
     data.samples = samples;
-    data.is_stereo = channel_count == 2;
-    
     data.sample_count = xx (frame_count * channel_count);
-    data.time_length = cast(float64)data.sample_count / sample_rate / channel_count;
-    data.rate_scale = cast(float64)sample_rate / OUTPUT_SAMPLE_RATE;
+    data.sample_rate = sample_rate;
+    data.channel_count = xx channel_count;
     
     return data;
 }
