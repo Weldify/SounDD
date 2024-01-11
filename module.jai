@@ -179,8 +179,8 @@ sounds_that_are_playing: [..]*Sound;
 main_mutex: Mutex;
 
 SAudio_Allocator :: struct {
-    alloc_fn: (u64, *void) -> *void #c_call;
-    free_fn: (*void, *void) #c_call;
+    alloc_fn: (size: u64, user_data: *void) -> *void #c_call;
+    free_fn: (ptr: *void, user_data: *void) #c_call;
     user_data: *void;
 }
 
@@ -190,8 +190,8 @@ SAudio_Desc :: struct {
     buffer_frames: s32;
     packet_frames: s32;
     num_packets: s32;
-    stream_cb: (*float32, s32, s32) #c_call;
-    stream_userdata_cb: (*float32, s32, s32, *void) #c_call;
+    stream_cb: (buffer: *float32, frame_count: s32, channel_count: s32) #c_call;
+    stream_userdata_cb: (buffer: *float32, frame_count: s32, channel_count: s32, user_data: *void) #c_call;
     user_data: *void;
     saudio_allocator: SAudio_Allocator;
 }

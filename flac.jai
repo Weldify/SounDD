@@ -30,12 +30,11 @@ flac_free_data :: (data: Sound_Data) {
     dr_flac :: #library,no_dll "win/dr_flac";
 }
 
-// @Todo: Hook up to jai allocator
 DRFlac_Allocation_Callbacks :: struct {
     user_data: *void;
-    on_malloc: (u64, *void) -> *void #c_call;
-    on_realloc: (*void, u64, *void) -> *void #c_call;
-    on_free: (*void, *void) #c_call;
+    on_malloc: (size: u64, user_data: *void) -> *void #c_call;
+    on_realloc: (ptr: *void, new_size: u64, user_data: *void) -> *void #c_call;
+    on_free: (ptr: *void, user_data: *void) #c_call;
 }
 
 allocation_callbacks := DRFlac_Allocation_Callbacks.{
