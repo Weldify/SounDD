@@ -111,7 +111,7 @@ decode_frame :: (bytes: *u8, sample: *s16, lms: *LMS_Array) -> frame_size: u32, 
     
     sample_index: s32 = 0;
     while (sample_index < samples_per_frame) {
-        sample_index += SLICE_LENGTH;
+        defer sample_index += SLICE_LENGTH;
         
         for c: 0..channel_count-1 {
             slice := byte_swap((cast(*u64)(bytes + cursor)).*);
@@ -123,7 +123,7 @@ decode_frame :: (bytes: *u8, sample: *s16, lms: *LMS_Array) -> frame_size: u32, 
             
             si: s32 = slice_start;
             while (si < slice_end) {
-                si += channel_count;
+                defer si += channel_count;
                 
                 predicted := lms_predict(*(lms.*[c]));
                 quantized := (slice >> 57) & 0x7;
