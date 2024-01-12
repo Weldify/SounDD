@@ -28,6 +28,8 @@ flac_free_data :: (data: Sound_Data) {
 
 #if OS == .WINDOWS {
     dr_flac :: #library,no_dll "win/dr_flac";
+} else #if OS == .LINUX {
+    dr_flac :: #library,no_dll "linux/dr_flac";
 }
 
 DRFlac_Allocation_Callbacks :: struct {
