@@ -1,4 +1,5 @@
 *.exe
 *.pdb
 *.build
-/examples/sounds
+
+examples/sounds
