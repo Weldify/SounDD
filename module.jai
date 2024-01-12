@@ -190,10 +190,10 @@ audio_update :: () {
 
 #if OS == .WINDOWS {
     sokol :: #library,no_dll "win/sokol";
-    ole :: #system_library "ole32";
+    ole :: #system_library,no_dll "ole32";
 } else #if OS == .LINUX {
     sokol :: #library,no_dll "linux/sokol";
-    alsa :: #system_library "libasound";
+    alsa :: #system_library,no_dll "libasound";
 }
 
 sounds_that_are_playing: [..]*Sound;
@@ -201,12 +201,12 @@ main_mutex: Mutex;
 
 SAudio_Allocator :: struct {
     alloc_fn: (size: u64, user_data: *void) -> *void #c_call;
-    free_fn: (ptr: *void, user_data: *void) -> void #c_call;
+    free_fn: (ptr: *void, user_data: *void) #c_call;
     user_data: *void;
 }
 
 SAudio_Logger :: struct {
-    func: (tag: *u8, log_level: u32, log_item_id: u32, message_or_null: *u8, line_nr: u32, filename_or_null: *u8, user_data: *void) ->void #c_call;
+    func: (tag: *u8, log_level: u32, log_item_id: u32, message_or_null: *u8, line_nr: u32, filename_or_null: *u8, user_data: *void) #c_call;
     user_data: *void;
 }
 
@@ -216,16 +216,15 @@ SAudio_Desc :: struct {
     buffer_frames: s32;
     packet_frames: s32;
     num_packets: s32;
-    stream_cb: (buffer: *float32, frame_count: s32, channel_count: s32) -> void #c_call;
-    stream_userdata_cb: (buffer: *float32, frame_count: s32, channel_count: s32, user_data: *void) -> void #c_call;
+    stream_cb: (buffer: *float32, frame_count: s32, channel_count: s32) #c_call;
+    stream_userdata_cb: (buffer: *float32, frame_count: s32, channel_count: s32, user_data: *void) #c_call;
     user_data: *void;
     saudio_allocator: SAudio_Allocator;
     logger: SAudio_Logger;
 }
 
-saudio_setup :: (desc: *SAudio_Desc) -> void #foreign sokol;
+saudio_setup :: (desc: *SAudio_Desc) #foreign sokol;
 saudio_isvalid :: () -> bool #foreign sokol;
-saudio_sample_rate :: () -> s32 #foreign sokol;
 
 saudio_alloc :: (size: u64, user_data: *void) -> *void #c_call {
     new_context: Context;
