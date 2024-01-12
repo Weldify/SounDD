@@ -15,7 +15,7 @@ main :: () {
     
     data_4 := sound_data_load_from_file("examples/enemy_kill.qoa");
     
-    footstep := create(data_1);
+    footstep := create(data_4);
     footstep.volume = 0.5;
     footstep.flags |= .SHOULD_REPEAT;
     play(footstep);
