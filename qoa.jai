@@ -5,8 +5,7 @@
 
 // @Note: This decoder assumes we are little endian. The format is big endian.
 
-// @Todo: Rename all format parse_data procedures to decode_data
-qoa_parse_data :: (str: string) -> Sound_Data {
+qoa_decode_string :: (str: string) -> Sound_Data {
     samples_per_channel, channel_count, sample_rate, cursor := decode_header(str.data);
 
     total_samples := samples_per_channel * channel_count;
@@ -19,8 +18,8 @@ qoa_parse_data :: (str: string) -> Sound_Data {
     data.channel_count = channel_count;
     
     sample_index: u32 = 0;
-    frame_length: u32;
-    frame_size: u32;
+    frame_length: u32 = ---;
+    frame_size: u32 = ---;
     
     lms: LMS_Array;
     

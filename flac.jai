@@ -2,7 +2,7 @@
 
 #scope_module
 
-flac_parse_data :: (str: string) -> Sound_Data {
+flac_decode_string :: (str: string) -> Sound_Data {
     data: Sound_Data;
     channel_count: u32;
     sample_rate: u32;

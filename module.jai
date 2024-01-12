@@ -80,19 +80,18 @@ sound_data_load_from_file :: (path: string) -> Sound_Data {
 
 sound_data_load_from_string :: (str: string, format: Audio_Format) -> Sound_Data {
     data: Sound_Data;
+    data.format = format;
     
     if format == .WAV {
-        #if SUPPORTED_FORMATS & .WAV data = wav_parse_data(str);
+        #if SUPPORTED_FORMATS & .WAV data = wav_decode_string(str);
         else assert(false, "WAV support is not enabled");
     } else if format == .FLAC {
-        #if SUPPORTED_FORMATS & .FLAC data = flac_parse_data(str);
+        #if SUPPORTED_FORMATS & .FLAC data = flac_decode_string(str);
         else assert(false, "FLAC support is not enabled");
     } else if format == .QOA {
-        #if SUPPORTED_FORMATS & .QOA data = qoa_parse_data(str);
+        #if SUPPORTED_FORMATS & .QOA data = qoa_decode_string(str);
         else assert(false, "QOA support is not enabled");
     } else assert(false, "Unsupported format");
-    
-    data.format = format;
     
     data.is_stereo = data.channel_count == 2;
     assert(data.channel_count <= 2, "Only mono and stereo are supported");
