@@ -2,7 +2,7 @@
 
 #scope_module
 
-wav_parse_data :: (str: string) -> Sound_Data {
+wav_decode_string :: (str: string) -> Sound_Data {
     data: Sound_Data;
     
     format, samples, success := get_wav_header(str);
